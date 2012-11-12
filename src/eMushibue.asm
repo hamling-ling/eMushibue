@@ -1,5 +1,5 @@
 ;=============================================================
-; title			: AvrMelodyPlayer
+; title			: eMushibue
 ; author		: Nobuhiro Kuroiwa
 ; started on	: 11/11/2012
 ; clock			: clk=8MHz
@@ -46,9 +46,10 @@
 .def scntl		= r13	; scntl compare value
 .def scnth		= r14	; scnth compare value
 .def vcnttop	= r15	; volume count top
-.def vcnt		= r16
-.def acc		= r17	; accumulator
-.def acc2		= r18	; accumulator2
+.def vcnt		= r16	; volume count
+.def vread		= r17	; voltage displacement read
+.def acc		= r18	; accumulator
+.def acc2		= r19	; accumulator2
 
 ;=============================================================
 ; macro
@@ -168,6 +169,7 @@ main:
 	clr		vcnt
 
 	; initialize adc
+	clr		vread
 	ldi		acc, ADMUXVAL
 	sts		admux, acc
 	ldi		acc, ADCSRAVAL
@@ -178,9 +180,7 @@ main:
 	sei						; allow all interruption
 
 main_loop:
-	;out	 	PORTB, sctopl	; output current sctopl value
-	out		PORTB, vcnttop
-	;out		portb, r19
+	out		PORTB, vcnttop	; output current sctopl value
 	rjmp	main_loop		; loop
 
 ;=============================================================
@@ -213,6 +213,10 @@ initr_time0_setsnd:
 	rcall	set_snd			; called every 100ms
 
 	; request adc interruption
+	lds		acc, admux
+	ldi		acc2, 1<<MUX0
+	eor		acc, acc2
+	sts		admux, acc
 	ldi		acc, ADCSRAVAL
 	sts		adcsra, acc
 
@@ -301,7 +305,7 @@ snd_pwm_ext:
 adc_comp:
 	STORE_REGS
 
-	rcall readv				; read voltage
+	rcall	readv				; read voltage
 
 	RESTORE_REGS
 
@@ -316,16 +320,24 @@ readv:
 	brpl	readv_positive
 	neg		acc
 readv_positive:
-	cpi		acc, 16
+	lds		acc2, admux
+	sbrc	acc2, 0
+	rjmp	readv_y
+readv_x:
+	mov		vread, acc
+	ret
+readv_y:
+	add		vread, acc
+readv_compare:
+	cpi		vread, 16-8
 	brlt	readv_level0
-	cpi		acc, 18
+	cpi		vread, 18-8
 	brlt	readv_level1
-	cpi		acc, 20
+	cpi		vread, 20-8
 	brlt	readv_level2
-	cpi		acc, 22
+	cpi		vread, 22-8
 	brlt	readv_level3
-	ldi		acc, 20
-	rjmp	readv_ext
+	rjmp	readv_level4
 readv_level0:
 	ldi		acc, 0
 	rjmp readv_ext
@@ -337,6 +349,9 @@ readv_level2:
 	rjmp readv_ext
 readv_level3:
 	ldi		acc, 16
+	rjmp readv_ext
+readv_level4:
+	ldi		acc, 20
 	rjmp readv_ext
 readv_ext:
 	mov		vcnttop, acc
