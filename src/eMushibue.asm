@@ -1,5 +1,5 @@
 ;=============================================================
-; title			: AvrMelodyPlayer
+; title			: eMushibue
 ; author		: Nobuhiro Kuroiwa
 ; started on	: 11/11/2012
 ; clock			: clk=8MHz
@@ -26,7 +26,20 @@
 						; max adc takes 400us, etc
 .equ ADMUXVAL	= (1<<REFS0)|(1<<ADLAR)	; adc ref voltage=AVcc, 8bit precision
 .equ ZEROGREAD	= 128	; 0g value of accerelometer read
-
+.equ PRT_LV		= portb	; port for level indicator
+.equ DDR_LV		= ddrb	; ddr  for PRT_LV
+.equ PRT_VOL	= portd	; port for volume pwm
+.equ DDR_VOL	= ddrd	; ddr for PRT_VOL
+.equ PIN_VOL	= 1		; pin for above
+.equ PRT_SND	= portd	; port for sound pwm
+.equ DDR_SND	= ddrd	; ddr for PRT_SND
+.equ PIN_SND	= 0		; pin for above
+.equ PRT_ACCX	= portc	; port for x-axis accelerometer read
+.equ DDR_ACCX	= ddrc	; ddr for PRT_ACCX
+.equ PIN_ACCX	= 0		; pin for above
+.equ PRT_ACCY	= portc	; pin for y-axis accelerometer read
+.equ DDR_ACCY	= ddrc	; ddr for PRT_ACCY
+.equ PIN_ACCY	= 1		; pin for above
 ;=============================================================
 ; variables
 ;=============================================================
@@ -46,9 +59,10 @@
 .def scntl		= r13	; scntl compare value
 .def scnth		= r14	; scnth compare value
 .def vcnttop	= r15	; volume count top
-.def vcnt		= r16
-.def acc		= r17	; accumulator
-.def acc2		= r18	; accumulator2
+.def vcnt		= r16	; volume count
+.def vread		= r17	; voltage displacement read
+.def acc		= r18	; accumulator
+.def acc2		= r19	; accumulator2
 
 ;=============================================================
 ; macro
@@ -114,22 +128,19 @@ main:
 	ldi		acc, 10			; put constant 10 in register
 	mov		ten, acc
 
-	; initialize port b
-	ldi	 	acc, 0xFF		; PORTB all bits are output
-	out	 	DDRB, acc		; set direction
+	; initialize port for level output
+	ldi	 	acc, 0xFF		; P_LV all bits are output
+	out	 	DDR_LV, acc		; set direction
 	ldi	 	acc, 0x00		; set output data
-	out	 	PORTB, acc		; set all to low
+	out	 	PRT_LV, acc		; set all to low
 
-	; initialize port c
-	ldi		acc, 0x00		; PORTC all bits are input
-	out		DDRC, acc		; set direction
-	out		portc, acc
+	; initialize port for snd and volume output
+	sbi		DDR_SND, PIN_SND; set the pin otuput
+	sbi		DDR_VOL, PIN_VOL; set the pin output
 
-	; initialize port d
-	ldi	 	acc, 0xFF		; PORTD all bits are output
-	out	 	DDRD, acc		; set direction
-	ldi	 	acc, 0x00		; set output data
-	out	 	PORTD, acc		; set all to low
+	; initialize port for accerelometer read
+	cbi		DDR_ACCX, PIN_ACCX
+	cbi		DDR_ACCY, PIN_ACCY
 
 	; Timer/Counter 0 initialize
 	; tccr0a=0, standard mode
@@ -168,6 +179,7 @@ main:
 	clr		vcnt
 
 	; initialize adc
+	clr		vread
 	ldi		acc, ADMUXVAL
 	sts		admux, acc
 	ldi		acc, ADCSRAVAL
@@ -178,9 +190,6 @@ main:
 	sei						; allow all interruption
 
 main_loop:
-	;out	 	PORTB, sctopl	; output current sctopl value
-	out		PORTB, vcnttop
-	;out		portb, r19
 	rjmp	main_loop		; loop
 
 ;=============================================================
@@ -213,6 +222,10 @@ initr_time0_setsnd:
 	rcall	set_snd			; called every 100ms
 
 	; request adc interruption
+	lds		acc, admux
+	ldi		acc2, 1<<MUX0
+	eor		acc, acc2
+	sts		admux, acc
 	ldi		acc, ADCSRAVAL
 	sts		adcsra, acc
 
@@ -233,10 +246,10 @@ vol_ctrl:
 	brlt	vol_ctrl_high
 	rjmp	vol_ctrl_low
 vol_ctrl_high:
-	sbi		portd, 1
+	sbi		PRT_VOL, 1
 	rjmp	vol_ctrl_vcnt
 vol_ctrl_low:
-	cbi		portd, 1
+	cbi		PRT_VOL, 1
 	rjmp	vol_ctrl_vcnt
 vol_ctrl_vcnt:
 	cpi		vcnt, VCNTMAX
@@ -300,11 +313,8 @@ snd_pwm_ext:
 ;=============================================================
 adc_comp:
 	STORE_REGS
-
-	rcall readv				; read voltage
-
+	rcall	readv				; read voltage
 	RESTORE_REGS
-
 	reti
 
 ;=============================================================
@@ -316,31 +326,54 @@ readv:
 	brpl	readv_positive
 	neg		acc
 readv_positive:
-	cpi		acc, 16
+	lds		acc2, admux
+	sbrc	acc2, 0
+	rjmp	readv_y
+readv_x:
+	mov		vread, acc
+	ret
+readv_y:
+	add		vread, acc
+readv_compare:
+	cpi		vread, 16-8
 	brlt	readv_level0
-	cpi		acc, 18
+	cpi		vread, 18-8
 	brlt	readv_level1
-	cpi		acc, 20
+	cpi		vread, 20-8
 	brlt	readv_level2
-	cpi		acc, 22
+	cpi		vread, 22-8
 	brlt	readv_level3
-	ldi		acc, 20
-	rjmp	readv_ext
+	cpi		vread, 24-8
+	brlt	readv_level4
+	rjmp	readv_level5
 readv_level0:
 	ldi		acc, 0
+	ldi		acc2, 0b0000_0001
 	rjmp readv_ext
 readv_level1:
 	ldi		acc, 4
+	ldi		acc2, 0b0000_0011
 	rjmp readv_ext
 readv_level2:
-	ldi		acc, 10
+	ldi		acc, 8
+	ldi		acc2, 0b0000_0111
 	rjmp readv_ext
 readv_level3:
+	ldi		acc, 12
+	ldi		acc2, 0b0000_1111
+	rjmp readv_ext
+readv_level4:
 	ldi		acc, 16
+	ldi		acc2, 0b0001_1111
+	rjmp readv_ext
+readv_level5:
+	ldi		acc, 20
+	ldi		acc2, 0b0011_1111
 	rjmp readv_ext
 readv_ext:
 	mov		vcnttop, acc
 	clr		vcnt
+	out		PRT_LV, acc2
 	ret
 
 ;=============================================================
@@ -436,6 +469,113 @@ SNDDATA_END:
 
 #ifdef XMAS
 SNDDATA:
+	.db NOTE_8, TONE_2G
+	.db NOTE_16, TONE_3C
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_3C
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_3C
+	.db NOTE_16, TONE_2B
+	.db NOTE_16, TONE_2A
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_2A
+	.db NOTE_16, TONE_1A
+
+	.db NOTE_8, TONE_2A
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_1D
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_2C
+	.db NOTE_8, TONE_1B
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_0G
+
+	.db NOTE_8, TONE_1G
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_1E
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_2F
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_2D
+	.db NOTE_8, TONE_2C
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_0A
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_1G
+	.db NOTE_8, TONE_1A
+	.db NOTE_8, TONE_2D
+	.db NOTE_8, TONE_1B
+	.db NOTE_4, TONE_2C
+
+	.db NOTE_8, TONE_2G
+	.db NOTE_16, TONE_3C
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_3C
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_3C
+	.db NOTE_16, TONE_2B
+	.db NOTE_16, TONE_2A
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_2A
+	.db NOTE_16, TONE_1A
+
+	.db NOTE_8, TONE_2A
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_1D
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_2C
+	.db NOTE_8, TONE_1B
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_0G
+
+	.db NOTE_8, TONE_1G
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_1E
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_2F
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_2D
+	.db NOTE_8, TONE_2C
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_0A
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_1G
+	.db NOTE_8, TONE_1A
+	.db NOTE_8, TONE_2D
+	.db NOTE_8, TONE_1B
+	.db NOTE_4, TONE_2C
+
+	.db NOTE_8, TONE_1G
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_1C
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_1C
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_1C
+	.db NOTE_4, TONE_1B
+	.db NOTE_8, TONE_2D
+	.db NOTE_8, TONE_2E
+	.db NOTE_8, TONE_2D
+	.db NOTE_8, TONE_2C
+	.db NOTE_4, TONE_1B
+	.db NOTE_8, TONE_2D
+	.db NOTE_8, TONE_2E
+	.db NOTE_8, TONE_2D
+	.db NOTE_8, TONE_2C
+	.db NOTE_8, TONE_2G
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_0G
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_0G
+	.db NOTE_8, TONE_1A
+	.db NOTE_8, TONE_2D
+	.db NOTE_8, TONE_1B
+	.db NOTE_4, TONE_2C
+
 	.db NOTE_8, TONE_2G
 	.db NOTE_16, TONE_3C
 	.db NOTE_16, TONE_2C
