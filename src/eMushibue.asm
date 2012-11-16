@@ -25,7 +25,8 @@
 						; adc setting
 						; max adc takes 400us, etc
 .equ ADMUXVAL	= (1<<REFS0)|(1<<ADLAR)	; adc ref voltage=AVcc, 8bit precision
-.equ ZEROGREAD	= 128	; 0g value of accerelometer read
+.equ ZEROGREADX	= 123	; 0g value of accerelometer read along x-axis
+.equ ZEROGREADY	= 128	; same for y-axis
 .equ PRT_LV		= portb	; port for level indicator
 .equ DDR_LV		= ddrb	; ddr  for PRT_LV
 .equ PRT_VOL	= portd	; port for volume pwm
@@ -243,13 +244,13 @@ intr_time0_end:
 vol_ctrl:
 	inc		vcnt
 	cp		vcnt, vcnttop
-	brlt	vol_ctrl_high
+	brlt	vol_ctrl_high	; if vcnt < vcnttop, goto vol_ctrl_high
 	rjmp	vol_ctrl_low
 vol_ctrl_high:
-	sbi		PRT_VOL, 1
+	sbi		PRT_VOL, PIN_VOL
 	rjmp	vol_ctrl_vcnt
 vol_ctrl_low:
-	cbi		PRT_VOL, 1
+	cbi		PRT_VOL, PIN_VOL
 	rjmp	vol_ctrl_vcnt
 vol_ctrl_vcnt:
 	cpi		vcnt, VCNTMAX
@@ -302,7 +303,7 @@ snd_pwm1:
 	brne	snd_pwm_ext
 	cp		sctoph, scnth
 	brne	snd_pwm_ext
-	FLIP_PORTOUT portd, 0b0000_0001
+	FLIP_PORTOUT PRT_SND, 1<<PIN_SND
 	clr		scntl
 	clr		scnth
 snd_pwm_ext:
@@ -321,10 +322,16 @@ adc_comp:
 ; readv
 ;=============================================================
 readv:
-	lds		acc, adch
-	subi	acc, ZEROGREAD
-	brpl	readv_positive
-	neg		acc
+	ldi		acc2, ZEROGREADX	; use x-axis neutral value
+	lds		acc, admux
+	sbrc	acc, 0
+	ldi		acc2, ZEROGREADY	; use y-axis neutral value
+
+	lds		acc, adch			; read D/A converted value
+	sub		acc, acc2			; acc-netral value
+	;subi	acc, ZEROGREADX
+	brpl	readv_positive		; if acc-acc2 > 0, goto readv_positive
+	neg		acc					; else take absolute value
 readv_positive:
 	lds		acc2, admux
 	sbrc	acc2, 0
