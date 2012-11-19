@@ -5,13 +5,15 @@
 ; clock			: clk=8MHz
 ;=============================================================
 ; melody data select
-; TINKLE	: Twinkle twinkle litttle star
-; XMAS		: We wish you are merry christmas
-;#define		TWINKLE	; uncommend if you want to change melody
-#define		XMAS		; commend if you above is commented out
+; uncomment one of followings or ALL
+;#define		TWINKLE		; Twinkle twinlke little star
+;#define		XMAS		; We wish you a merry christmas
+;#define		DONSUKA		; Donsuka pan pan ouendan
+;#define		SPERUNKER	; Sperunker
+#define			ALL			; play all
 
 ; header files
-.include "m168def.inc"	;
+.include "m168def.inc"		;
 .include "musicnote.inc"	; definition of music stuff
 
 ;=============================================================
@@ -41,6 +43,7 @@
 .equ PRT_ACCY	= portc	; pin for y-axis accelerometer read
 .equ DDR_ACCY	= ddrc	; ddr for PRT_ACCY
 .equ PIN_ACCY	= 1		; pin for above
+
 ;=============================================================
 ; variables
 ;=============================================================
@@ -77,7 +80,7 @@
 .endmacro
 
 .macro RESTORE_REGS
-	pop		acc2			; restore acc2			
+	pop		acc2			; restore acc2
 	pop		acc				; restore acc
 	pop		sreg_save
 	out		SREG, sreg_save	; restore sreg
@@ -170,7 +173,7 @@ main:
 	ldi		zl, low(SNDDATA<<1)		; init zl
 	ldi		zh, high(SNDDATA<<1)	; init zh
 
-	lpm		mtop, z+			; initialize tcnt compare value
+	lpm		mtop, z+		; initialize tcnt compare value
 	lpm		sctopl, z+		; count untill scntl becomes this value
 	clr		sctoph			; and scnth becomes this value. but not used this time
 
@@ -211,7 +214,7 @@ intr_time0:
 
 	TIME_COUNT t10us,	intr_time0_sndpwm	; count wrap around for 10us
 	TIME_COUNT t100us,	intr_time0_sndpwm	; count wrap around for 100us
-	rcall	vol_ctrl		; call every 100us
+	rcall	vol_ctrl						; call every 100us
 	TIME_COUNT t1ms,	intr_time0_sndpwm	; count wrap around for 1ms
 	TIME_COUNT t10ms,	intr_time0_sndpwm	; count wrap around for 10ms
 	TIME_COUNT t100ms,	initr_time0_setsnd	; count wrap around for 100ms
@@ -220,7 +223,7 @@ intr_time0:
 initr_time0_setsnd:
 	
 	; set sound frequency
-	rcall	set_snd			; called every 100ms
+	rcall	set_snd							; called every 100ms
 
 	; request adc interruption
 	lds		acc, admux
@@ -329,7 +332,6 @@ readv:
 
 	lds		acc, adch			; read D/A converted value
 	sub		acc, acc2			; acc-netral value
-	;subi	acc, ZEROGREADX
 	brpl	readv_positive		; if acc-acc2 > 0, goto readv_positive
 	neg		acc					; else take absolute value
 readv_positive:
@@ -386,7 +388,7 @@ readv_ext:
 ;=============================================================
 ; data
 ;=============================================================
-#ifdef TWINKLE
+#if defined(TWINKLE) || defined(ALL)
 SNDDATA:
 	.db NOTE_8, TONE_2C
 	.db NOTE_8, TONE_1C
@@ -471,11 +473,15 @@ SNDDATA:
 	.db NOTE_8, TONE_2D
 	.db NOTE_8, TONE_1D
 	.db NOTE_2, TONE_2C
+#if !defined(ALL)
 SNDDATA_END:
 #endif
+#endif
 
-#ifdef XMAS
+#if defined(XMAS) || defined(ALL)
+#if !defined(ALL)
 SNDDATA:
+#endif
 	.db NOTE_8, TONE_2G
 	.db NOTE_16, TONE_3C
 	.db NOTE_16, TONE_2C
@@ -622,7 +628,357 @@ SNDDATA:
 	.db NOTE_8, TONE_2D
 	.db NOTE_8, TONE_1B
 	.db NOTE_4, TONE_2C
+#if !defined(ALL)
 SNDDATA_END:
+#endif
+#endif
+
+
+#if defined(DONSUKA) || defined(ALL)
+#if !defined(ALL)
+SNDDATA:
+#endif
+	.db NOTE_16, TONE_2F
+	.db NOTE_16, TONE_2G
+	.db NOTE_16, TONE_2A
+	.db NOTE_32, TONE_2G
+	.db NOTE_32, TONE_2A
+	.db NOTE_16, TONE_2AS
+	.db NOTE_16, TONE_2A
+	.db NOTE_16, TONE_2G
+	.db NOTE_16, TONE_2F
+	.db NOTE_12, TONE_2DS
+	.db NOTE_32, TONE_2F
+	.db NOTE_32, TONE_2G
+	.db NOTE_16, TONE_2GS
+	.db NOTE_16, TONE_2G
+	.db NOTE_16, TONE_2F
+	.db NOTE_16, TONE_2DS
+
+	.db NOTE_4, TONE_1C
+	.db NOTE_4, TONE_1E
+	.db NOTE_4, TONE_1G
+	.db NOTE_8, TONE_2C
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1G
+	.db NOTE_32, TONE_0G
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1G
+	.db NOTE_32, TONE_0G
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1G
+	.db NOTE_32, TONE_0G
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1G
+	.db NOTE_32, TONE_0G
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_1E
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_1E
+	.db NOTE_16, TONE_2F
+	.db NOTE_16, TONE_1F
+	.db NOTE_16, TONE_2F
+	.db NOTE_16, TONE_1F
+	.db NOTE_16, TONE_2G
+	.db NOTE_16, TONE_3C
+	.db NOTE_16, TONE_2G
+	.db NOTE_16, TONE_2F
+	.db NOTE_8, TONE_2E
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_1E
+	.db NOTE_16, TONE_2E
+	.db NOTE_16, TONE_1E
+	.db NOTE_16, TONE_2F
+	.db NOTE_16, TONE_1F
+	.db NOTE_16, TONE_2F
+	.db NOTE_16, TONE_1F
+	.db NOTE_8, TONE_1G
+	.db NOTE_8, TONE_2C
+	.db NOTE_4, TONE_1AS
+
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_0A
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_0A
+	.db NOTE_16, TONE_1AS
+	.db NOTE_16, TONE_0AS
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_1C
+	.db NOTE_8, TONE_2DS
+	.db NOTE_8, TONE_2D
+	.db NOTE_4, TONE_2C
+
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_0A
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_0A
+	.db NOTE_16, TONE_1AS
+	.db NOTE_16, TONE_0AS
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_1C
+	.db NOTE_32, TONE_2DS
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2DS
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2DS
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2DS
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2DS
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2DS
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2DS
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2DS
+	.db NOTE_32, TONE_NONE
+
+	
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1G
+	.db NOTE_32, TONE_0G
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1G
+	.db NOTE_32, TONE_0G
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1G
+	.db NOTE_32, TONE_0G
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1G
+	.db NOTE_32, TONE_0G
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_16, TONE_NONE
+	.db NOTE_WL, TONE_NONE
+#if !defined(ALL)
+SNDDATA_END:
+#endif
+#endif
+
+#if defined(SPERUNKER) || defined(ALL)
+#if !defined(ALL)
+SNDDATA:
+#endif
+	.db NOTE_16, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1AS
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1F
+	.db NOTE_16, TONE_1E
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1F
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1E
+	.db NOTE_8, TONE_1C
+
+	.db NOTE_16, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1AS
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1F
+	.db NOTE_16, TONE_1E
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1F
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1E
+	.db NOTE_8, TONE_1C
+
+	.db NOTE_16, TONE_NONE
+	.db NOTE_8, TONE_2C
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_2DS
+	.db NOTE_16, TONE_2D
+	.db NOTE_8, TONE_2C
+	.db NOTE_32, TONE_2DS
+	.db NOTE_32, TONE_2D
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_2DS
+	.db NOTE_16, TONE_2D
+	.db NOTE_4, TONE_2C
+
+	.db NOTE_16, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1AS
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1F
+	.db NOTE_16, TONE_1E
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1F
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1E
+	.db NOTE_8, TONE_1C
+
+	.db NOTE_4, TONE_1GS
+	.db NOTE_8, TONE_1GS
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_2AS
+	.db NOTE_16, TONE_2D
+	.db NOTE_8, TONE_2C
+	.db NOTE_8, TONE_1AS
+	.db NOTE_12, TONE_1AS
+
+	.db NOTE_4, TONE_2C
+	.db NOTE_16, TONE_2DS
+	.db NOTE_16, TONE_2D
+	.db NOTE_16, TONE_2C
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1AS
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_0G
+	.db NOTE_16, TONE_NONE
+
+	.db NOTE_16, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1AS
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1F
+	.db NOTE_16, TONE_1E
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1F
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1E
+	.db NOTE_8, TONE_1C
+
+	.db NOTE_16, TONE_2C
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_2C
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1AS
+	.db NOTE_16, TONE_1A
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_1F
+	.db NOTE_16, TONE_1E
+	.db NOTE_32, TONE_NONE
+	.db NOTE_32, TONE_1F
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1G
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1E
+	.db NOTE_8, TONE_1C
+
+	.db NOTE_32, TONE_1AS
+	.db NOTE_16, TONE_NONE
+	.db NOTE_32, TONE_1G
+	.db NOTE_32, TONE_1A
+	.db NOTE_16, TONE_NONE
+	.db NOTE_32, TONE_1F
+	.db NOTE_32, TONE_1G
+	.db NOTE_16, TONE_NONE
+	.db NOTE_32, TONE_1DS
+	.db NOTE_32, TONE_1F
+	.db NOTE_16, TONE_NONE
+	.db NOTE_32, TONE_1D
+	.db NOTE_32, TONE_1C
+	.db NOTE_24, TONE_NONE
+	.db NOTE_16, TONE_1DS
+	.db NOTE_16, TONE_NONE
+	.db NOTE_16, TONE_1C
+	.db NOTE_16, TONE_NONE
+	.db NOTE_8, TONE_NONE
+#if defined(SPERUNKER) || defined(ALL)
+SNDDATA_END:
+#endif
 #endif
 
 ;=============================================================
