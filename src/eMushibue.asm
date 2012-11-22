@@ -4,31 +4,25 @@
 ; started on	: 11/11/2012
 ; clock			: clk=8MHz
 ;=============================================================
+; chip select
+;#define			ATMEGA168	; Atmega168
+#define			ATTINY45	; AtTiny45
+
 ; melody data select
 ; uncomment one of followings or ALL
 ;#define		TWINKLE		; Twinkle twinlke little star
 ;#define		XMAS		; We wish you a merry christmas
 ;#define		DONSUKA		; Donsuka pan pan ouendan
-;#define		SPERUNKER	; Sperunker
-#define			ALL			; play all
+#define		SPERUNKER	; Sperunker
+;#define			ALL			; play all
 
-; header files
-.include "m168def.inc"		;
 .include "musicnote.inc"	; definition of music stuff
 
 ;=============================================================
-; constants
+; ports and pins
 ;=============================================================
-; timer cont
-.equ T10USEC	= 248	; Pre Scale=1/8, 100KHz
-.equ PRE_SCALE	= 0x2	; 1/8
-.equ VCNTMAX	= 20	; max valu of vcnt
-.equ ADCSRAVAL	= (1<<ADEN)|(1<<ADSC)|(1<<ADIF)|(1<<ADIE)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)
-						; adc setting
-						; max adc takes 400us, etc
-.equ ADMUXVAL	= (1<<REFS0)|(1<<ADLAR)	; adc ref voltage=AVcc, 8bit precision
-.equ ZEROGREADX	= 123	; 0g value of accerelometer read along x-axis
-.equ ZEROGREADY	= 128	; same for y-axis
+#ifdef ATMEGA168
+.include "m168def.inc"	;
 .equ PRT_LV		= portb	; port for level indicator
 .equ DDR_LV		= ddrb	; ddr  for PRT_LV
 .equ PRT_VOL	= portd	; port for volume pwm
@@ -43,6 +37,47 @@
 .equ PRT_ACCY	= portc	; pin for y-axis accelerometer read
 .equ DDR_ACCY	= ddrc	; ddr for PRT_ACCY
 .equ PIN_ACCY	= 1		; pin for above
+.equ TIMERMASK	= TIMSK0
+.equ ADCSRAVAL	= (1<<ADEN)|(1<<ADSC)|(1<<ADIF)|(1<<ADIE)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)
+						; adc setting
+						; max adc takes 400us, etc
+.equ ADMUXVAL	= (1<<REFS0)|(1<<ADLAR)	; adc ref voltage=AVcc, 8bit precision
+#endif
+
+#ifdef ATTINY45
+.include "tn45def.inc"
+.equ PRT_LV		= portb	; port for level indicator
+.equ DDR_LV		= ddrb	; ddr  for PRT_LV
+.equ PIN_LV		= 3
+.equ PRT_VOL	= portb	; port for volume pwm
+.equ DDR_VOL	= ddrb	; ddr for PRT_VOL
+.equ PIN_VOL	= 1		; pin for above
+.equ PRT_SND	= portb	; port for sound pwm
+.equ DDR_SND	= ddrb	; ddr for PRT_SND
+.equ PIN_SND	= 0		; pin for above
+.equ PRT_ACCX	= portb	; port for x-axis accelerometer read
+.equ DDR_ACCX 	= ddrb	; ddr for PRT_ACCX
+.equ PIN_ACCX	= 2		; pin for above
+.equ PRT_ACCY	= portb	; pin for y-axis accelerometer read
+.equ DDR_ACCY  	= ddrb	; ddr for PRT_ACCY
+.equ PIN_ACCY	= 4		; pin for above
+.equ TIMERMASK	= TIMSK
+.equ ADCSRAVAL	= (1<<ADEN)|(1<<ADSC)|(1<<ADIF)|(1<<ADIE)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)
+						; adc setting
+						; max adc takes 400us, etc
+.equ ADMUXVAL	= (1<<ADLAR)|(1<<MUX0)	; adc ref vref=internal, 8bit precision
+#endif
+
+;=============================================================
+; constants
+;=============================================================
+; timer cont
+.equ T10USEC	= 248	; Pre Scale=1/8, 100KHz
+.equ PRE_SCALE	= 0x2	; 1/8
+
+.equ VCNTMAX	= 20	; max valu of vcnt
+.equ ZEROGREADX	= 128	; 0g value of accerelometer read along x-axis
+.equ ZEROGREADY	= 128	; same for y-axis
 
 ;=============================================================
 ; variables
@@ -102,6 +137,28 @@
 	out		@0, acc		; output
 .endmacro
 
+; usage: InReg reg, addr 
+.macro InReg 
+	.if @1 < 0x40 
+		in @0, @1 
+	.elif ((@1 >= 0x60) && (@1 < SRAM_START)) 
+         lds @0,@1 
+	.else 
+		.error "InReg: Invalid I/O register address" 
+	.endif 
+.endmacro 
+
+; usage: OutReg addr, reg 
+.macro OutReg 
+	.if @0 < 0x40 
+		out @0, @1 
+	.elif ((@0 >= 0x60) && (@0 < SRAM_START)) 
+		sts @0,@1 
+	.else 
+		.error "OutReg: Invalid I/O register address" 
+	.endif 
+.endmacro 
+
 ;=============================================================
 ; program
 ;=============================================================
@@ -110,9 +167,16 @@
 ;=============================================================
 ; vectors
 ;=============================================================
-.org 	0x0000		jmp	main	 	; reset handler
-.org	0x0020		jmp intr_time0	; timer0 overflow handler
-.org	0x002A		jmp adc_comp	; adc complete
+#ifdef ATMEGA168
+.org 	0x0000		rjmp main	 	; reset handler
+.org	0x0020		rjmp intr_time0	; timer0 overflow handler
+.org	0x002A		rjmp adc_comp	; adc complete
+#endif
+#ifdef ATTINY45
+.org 	0x0000		rjmp main	 	; reset handler
+.org	0x0005		rjmp intr_time0	; timer0 overflow handler
+.org	0x0008		rjmp adc_comp	; adc complete
+#endif
 
 ;=============================================================
 ; main
@@ -132,25 +196,24 @@ main:
 	ldi		acc, 10			; put constant 10 in register
 	mov		ten, acc
 
-	; initialize port for level output
+	; initialize ports
+#ifdef ATMEGA168
 	ldi	 	acc, 0xFF		; P_LV all bits are output
 	out	 	DDR_LV, acc		; set direction
 	ldi	 	acc, 0x00		; set output data
 	out	 	PRT_LV, acc		; set all to low
-
-	; initialize port for snd and volume output
-	sbi		DDR_SND, PIN_SND; set the pin otuput
-	sbi		DDR_VOL, PIN_VOL; set the pin output
-
-	; initialize port for accerelometer read
-	cbi		DDR_ACCX, PIN_ACCX
-	cbi		DDR_ACCY, PIN_ACCY
+#endif
+#ifdef ATTINY45
+	ldi		acc, (1<<PIN_SND)|(1<<PIN_VOL)|(1<<PIN_LV)
+	out		DDR_SND, acc
+	out		PRT_SND, acc
+#endif
 
 	; Timer/Counter 0 initialize
 	; tccr0a=0, standard mode
-	lds		acc, timsk0
+	ldi		acc, 0
 	sbr	 	acc,(1<<TOIE0)	; set overflow interruption bit
-	sts	 	TIMSK0, acc		; allow timer0 overflow interruption
+	OutReg	 TIMERMASK, acc	; allow timer0 overflow interruption
 	ldi	 	acc, T10USEC	; 10us count
 	out	 	TCNT0, acc		; set timer0 counter
 	ldi	 	acc, PRE_SCALE	; set prescale
@@ -161,6 +224,8 @@ main:
 	clr	 	t100us			; init counter for 100usr
 	clr	 	t1ms			; init counter for 1ms
 	clr		t10ms			; init counter for 10ms
+	clr		t100ms
+	clr		t1s
 
 	; initialize sound interval counter
 	clr		sctopl			; sound interval count low
@@ -185,15 +250,16 @@ main:
 	; initialize adc
 	clr		vread
 	ldi		acc, ADMUXVAL
-	sts		admux, acc
+	OutReg	ADMUX, acc
 	ldi		acc, ADCSRAVAL
-	sts		adcsra, acc
+	OutReg	ADCSRA, acc
 	ldi		acc, 0x00
-	sts		adcsrb, acc
+	OutReg	ADCSRB, acc
 
 	sei						; allow all interruption
 
 main_loop:
+
 	rjmp	main_loop		; loop
 
 ;=============================================================
@@ -205,7 +271,6 @@ intr_time0:
 	; reset timer
 	clr		acc				; stop counter
 	out		tccr0b, acc
-
 	ldi		acc, T10USEC	; 10usec count
 	out		TCNT0, acc		; set timer0
 
@@ -221,17 +286,16 @@ intr_time0:
 	TIME_COUNT t1s,		initr_time0_setsnd	; count wrap around for 1s
 
 initr_time0_setsnd:
-	
 	; set sound frequency
 	rcall	set_snd							; called every 100ms
 
 	; request adc interruption
-	lds		acc, admux
-	ldi		acc2, 1<<MUX0
+	InReg	acc, ADMUX
+	ldi		acc2, (1<<MUX1)|(1<<MUX0)
 	eor		acc, acc2
-	sts		admux, acc
+	OutReg	ADMUX, acc
 	ldi		acc, ADCSRAVAL
-	sts		adcsra, acc
+	OutReg	ADCSRA, acc
 
 intr_time0_sndpwm:
 	rcall	snd_pwm
@@ -326,16 +390,17 @@ adc_comp:
 ;=============================================================
 readv:
 	ldi		acc2, ZEROGREADX	; use x-axis neutral value
-	lds		acc, admux
+	InReg	acc, ADMUX
 	sbrc	acc, 0
 	ldi		acc2, ZEROGREADY	; use y-axis neutral value
 
-	lds		acc, adch			; read D/A converted value
+	clc
+	InReg	acc, ADCH			; read D/A converted value
 	sub		acc, acc2			; acc-netral value
 	brpl	readv_positive		; if acc-acc2 > 0, goto readv_positive
 	neg		acc					; else take absolute value
 readv_positive:
-	lds		acc2, admux
+	InReg		acc2, ADMUX
 	sbrc	acc2, 0
 	rjmp	readv_y
 readv_x:
@@ -382,7 +447,12 @@ readv_level5:
 readv_ext:
 	mov		vcnttop, acc
 	clr		vcnt
-	out		PRT_LV, acc2
+#ifdef ATMEGA168
+	out		;PRT_LV, acc2
+#endif
+#ifdef ATTINY45
+	sbi		PRT_LV, PIN_LV
+#endif
 	ret
 
 ;=============================================================
