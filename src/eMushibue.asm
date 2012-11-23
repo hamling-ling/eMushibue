@@ -107,14 +107,14 @@
 ; macro
 ;=============================================================
 ; preserve registers
-.macro STORE_REGS
+.macro StoreRegs
 	in		sreg_save, SREG	; preserve status
 	push	sreg_save
 	push	acc				; preserve acc
 	push	acc2			; preserve acc2
 .endmacro
 
-.macro RESTORE_REGS
+.macro RestoreRegs
 	pop		acc2			; restore acc2
 	pop		acc				; restore acc
 	pop		sreg_save
@@ -122,7 +122,7 @@
 .endmacro
 
 ; time count
-.macro TIME_COUNT		; TIME_COUNT @0 @1
+.macro TimeCount		; TIME_COUNT @0 @1
 	inc		@0			; increment register given by @0
 	cp		@0, ten		; compare the register
 	brne	@1			; if the register != 10 jump to @1
@@ -130,7 +130,7 @@
 .endmacro
 
 ; flip port output
-.macro FLIP_PORTOUT		; FLIP_PORT portx, port_bit
+.macro FlipOut			; FLIP_PORT portx, port_bit
 	in		acc, @0
 	ldi		acc2, @1	; bit mask
 	eor		acc, acc2
@@ -204,16 +204,22 @@ main:
 	out	 	PRT_LV, acc		; set all to low
 #endif
 #ifdef ATTINY45
-	ldi		acc, (1<<PIN_SND)|(1<<PIN_VOL)|(1<<PIN_LV)
-	out		DDR_SND, acc
-	out		PRT_SND, acc
+	;ldi		acc, (1<<PIN_SND)|(1<<PIN_VOL)|(1<<PIN_LV)
+	;out		DDR_SND, acc
+	sbi		DDR_SND, PIN_SND
+	sbi		DDR_VOL, PIN_VOL
+	sbi		DDR_LV, PIN_LV
+	cbi		DDR_ACCX, PIN_ACCX
+	cbi		DDR_ACCY, PIN_ACCY
+	;cbi		ddrb, 2
+	;cbi		ddrb, 4
 #endif
 
 	; Timer/Counter 0 initialize
 	; tccr0a=0, standard mode
 	ldi		acc, 0
 	sbr	 	acc,(1<<TOIE0)	; set overflow interruption bit
-	OutReg	 TIMERMASK, acc	; allow timer0 overflow interruption
+	OutReg	TIMERMASK, acc	; allow timer0 overflow interruption
 	ldi	 	acc, T10USEC	; 10us count
 	out	 	TCNT0, acc		; set timer0 counter
 	ldi	 	acc, PRE_SCALE	; set prescale
@@ -266,7 +272,7 @@ main_loop:
 ; timer0 interruption
 ;=============================================================
 intr_time0:
-	STORE_REGS
+	StoreRegs
 
 	; reset timer
 	clr		acc				; stop counter
@@ -277,13 +283,13 @@ intr_time0:
 	ldi		acc, PRE_SCALE
 	out		tccr0b, acc
 
-	TIME_COUNT t10us,	intr_time0_sndpwm	; count wrap around for 10us
-	TIME_COUNT t100us,	intr_time0_sndpwm	; count wrap around for 100us
-	rcall	vol_ctrl						; call every 100us
-	TIME_COUNT t1ms,	intr_time0_sndpwm	; count wrap around for 1ms
-	TIME_COUNT t10ms,	intr_time0_sndpwm	; count wrap around for 10ms
-	TIME_COUNT t100ms,	initr_time0_setsnd	; count wrap around for 100ms
-	TIME_COUNT t1s,		initr_time0_setsnd	; count wrap around for 1s
+	TimeCount	t10us,	intr_time0_sndpwm	; count wrap around for 10us
+	TimeCount	t100us,	intr_time0_sndpwm	; count wrap around for 100us
+	rcall		vol_ctrl					; call every 100us
+	TimeCount	t1ms,	intr_time0_sndpwm	; count wrap around for 1ms
+	TimeCount	t10ms,	intr_time0_sndpwm	; count wrap around for 10ms
+	TimeCount	t100ms,	initr_time0_setsnd	; count wrap around for 100ms
+	TimeCount	t1s,	initr_time0_setsnd	; count wrap around for 1s
 
 initr_time0_setsnd:
 	; set sound frequency
@@ -302,7 +308,7 @@ intr_time0_sndpwm:
 
 intr_time0_end:
 
-	RESTORE_REGS
+	RestoreRegs
 	reti
 
 ;=============================================================
@@ -370,7 +376,7 @@ snd_pwm1:
 	brne	snd_pwm_ext
 	cp		sctoph, scnth
 	brne	snd_pwm_ext
-	FLIP_PORTOUT PRT_SND, 1<<PIN_SND
+	FlipOut	PRT_SND, 1<<PIN_SND
 	clr		scntl
 	clr		scnth
 snd_pwm_ext:
@@ -380,9 +386,9 @@ snd_pwm_ext:
 ; adc_complete
 ;=============================================================
 adc_comp:
-	STORE_REGS
+	StoreRegs
 	rcall	readv				; read voltage
-	RESTORE_REGS
+	RestoreRegs
 	reti
 
 ;=============================================================
@@ -400,7 +406,7 @@ readv:
 	brpl	readv_positive		; if acc-acc2 > 0, goto readv_positive
 	neg		acc					; else take absolute value
 readv_positive:
-	InReg		acc2, ADMUX
+	InReg	acc2, ADMUX
 	sbrc	acc2, 0
 	rjmp	readv_y
 readv_x:
