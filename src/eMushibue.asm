@@ -204,15 +204,11 @@ main:
 	out	 	PRT_LV, acc		; set all to low
 #endif
 #ifdef ATTINY45
-	;ldi		acc, (1<<PIN_SND)|(1<<PIN_VOL)|(1<<PIN_LV)
-	;out		DDR_SND, acc
 	sbi		DDR_SND, PIN_SND
 	sbi		DDR_VOL, PIN_VOL
 	sbi		DDR_LV, PIN_LV
 	cbi		DDR_ACCX, PIN_ACCX
 	cbi		DDR_ACCY, PIN_ACCY
-	;cbi		ddrb, 2
-	;cbi		ddrb, 4
 #endif
 
 	; Timer/Counter 0 initialize
@@ -317,12 +313,12 @@ intr_time0_end:
 vol_ctrl:
 	inc		vcnt
 	cp		vcnt, vcnttop
-	brlt	vol_ctrl_high	; if vcnt < vcnttop, goto vol_ctrl_high
-	rjmp	vol_ctrl_low
-vol_ctrl_high:
+	brlt	vol_ctrl_on	; if vcnt < vcnttop, goto vol_ctrl_high
+	rjmp	vol_ctrl_off
+vol_ctrl_on:
 	sbi		PRT_VOL, PIN_VOL
 	rjmp	vol_ctrl_vcnt
-vol_ctrl_low:
+vol_ctrl_off:
 	cbi		PRT_VOL, PIN_VOL
 	rjmp	vol_ctrl_vcnt
 vol_ctrl_vcnt:
