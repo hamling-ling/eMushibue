@@ -74,9 +74,9 @@
 ; constants
 ;=============================================================
 #ifdef DEBUG
-.equ INSENSITIVITY = 8	; insensitivity
-#elif
-.equ INSENSITIVITY = 0	; insensitivity
+.equ SENSITIVITY = 8	; sensitivity
+#else
+.equ SENSITIVITY = 0	; sensitivity
 #endif
 .equ T10USEC	= 248	; Pre Scale=1/8, 100KHz
 .equ PRE_SCALE	= 0x2	; 1/8
@@ -411,15 +411,15 @@ readv_y:
 	add		vval, vread
 	lsr		vval
 readv_compare:
-	cpi		vval, 16-INSENSITIVITY
+	cpi		vval, 26-SENSITIVITY
 	brlt	readv_level0
-	cpi		vval, 18-INSENSITIVITY
+	cpi		vval, 28-SENSITIVITY
 	brlt	readv_level1
-	cpi		vval, 20-INSENSITIVITY
+	cpi		vval, 30-SENSITIVITY
 	brlt	readv_level2
-	cpi		vval, 22-INSENSITIVITY
+	cpi		vval, 32-SENSITIVITY
 	brlt	readv_level3
-	cpi		vval, 24-INSENSITIVITY
+	cpi		vval, 34-SENSITIVITY
 	brlt	readv_level4
 	rjmp	readv_level5
 readv_level0:
