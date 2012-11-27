@@ -90,15 +90,14 @@
 .def t10ms		= r6	; count for 10ms
 .def t100ms		= r7	; count for 100ms
 .def t1s		= r8	; count for 1s
-.def sctopl		= r9	; sound interval count low byte
-.def sctoph		= r10	; sound interval count high byte
-.def mcnt		= r11	; t100ms counter
-.def mtop		= r12	; tcnt top value
-.def scntl		= r13	; scntl compare value
-.def scnth		= r14	; scnth compare value
-.def vcnttop	= r15	; volume count top
-.def vcnt		= r16	; volume count
-.def vread		= r17	; voltage displacement read
+.def sctop		= r9	; sound interval count
+.def mcnt		= r10	; t100ms counter
+.def mtop		= r11	; tcnt top value
+.def scnt		= r12	; compare to scnt for rythm
+.def vcnttop	= r13	; volume count top
+.def vcnt		= r14	; volume count
+.def vval		= r16	; last applied voltage displacement
+.def vread		= r17	; voltage displacement read in process
 .def acc		= r18	; accumulator
 .def acc2		= r19	; accumulator2
 
@@ -229,8 +228,7 @@ main:
 	clr		t1s
 
 	; initialize sound interval counter
-	clr		sctopl			; sound interval count low
-	clr		sctoph			; sound interval count high
+	clr		sctop			; sound interval count
 
 	; initialize melody counter
 	clr		mcnt			; initialize melody counter
@@ -240,8 +238,7 @@ main:
 	ldi		zh, high(SNDDATA<<1)	; init zh
 
 	lpm		mtop, z+		; initialize tcnt compare value
-	lpm		sctopl, z+		; count untill scntl becomes this value
-	clr		sctoph			; and scnth becomes this value. but not used this time
+	lpm		sctop, z+		; count untill scnt becomes this value
 
 	; initialize volume counter
 	ldi		acc, 0
@@ -321,7 +318,8 @@ vol_ctrl_off:
 	cbi		PRT_VOL, PIN_VOL
 	rjmp	vol_ctrl_vcnt
 vol_ctrl_vcnt:
-	cpi		vcnt, VCNTMAX
+	ldi		acc, VCNTMAX
+	cp		vcnt, acc
 	brne vol_ctrl_ext
 	clr		vcnt
 vol_ctrl_ext:
@@ -348,10 +346,8 @@ set_snd:
 
 set_snd_asgn:
 	lpm		mtop, z+		; initialize tcnt compare value
-	lpm		sctopl, z+		; count untill scntl becomes this value
-	clr		sctoph			; and scnth becomes this value. but not used this time
-	clr		scntl
-	clr		scnth
+	lpm		sctop, z+		; count untill scnt becomes this value
+	clr		scnt
 set_snd_exit:
 	ret
 
@@ -360,20 +356,17 @@ set_snd_exit:
 ;=============================================================
 snd_pwm:
 	clc
-	adc		scntl, one
+	adc		scnt, one
 	brcc	snd_pwm1
 	clc
-	adc		scnth, one
+	adc		scnt, one
 	brcc	snd_pwm1
 	clc
 snd_pwm1:
-	cp		sctopl, scntl
-	brne	snd_pwm_ext
-	cp		sctoph, scnth
+	cp		sctop, scnt
 	brne	snd_pwm_ext
 	FlipOut	PRT_SND, 1<<PIN_SND
-	clr		scntl
-	clr		scnth
+	clr		scnt
 snd_pwm_ext:
 	ret
 
@@ -409,16 +402,18 @@ readv_x:
 	ret
 readv_y:
 	add		vread, acc
+	add		vval, vread
+	lsr		vval
 readv_compare:
-	cpi		vread, 16-8
+	cpi		vval, 16-8
 	brlt	readv_level0
-	cpi		vread, 18-8
+	cpi		vval, 18-8
 	brlt	readv_level1
-	cpi		vread, 20-8
+	cpi		vval, 20-8
 	brlt	readv_level2
-	cpi		vread, 22-8
+	cpi		vval, 22-8
 	brlt	readv_level3
-	cpi		vread, 24-8
+	cpi		vval, 24-8
 	brlt	readv_level4
 	rjmp	readv_level5
 readv_level0:
@@ -426,19 +421,19 @@ readv_level0:
 	ldi		acc2, 0b0000_0001
 	rjmp readv_ext
 readv_level1:
-	ldi		acc, 4
+	ldi		acc, 5
 	ldi		acc2, 0b0000_0011
 	rjmp readv_ext
 readv_level2:
-	ldi		acc, 8
+	ldi		acc, 6
 	ldi		acc2, 0b0000_0111
 	rjmp readv_ext
 readv_level3:
-	ldi		acc, 12
+	ldi		acc, 7
 	ldi		acc2, 0b0000_1111
 	rjmp readv_ext
 readv_level4:
-	ldi		acc, 16
+	ldi		acc, 8
 	ldi		acc2, 0b0001_1111
 	rjmp readv_ext
 readv_level5:
