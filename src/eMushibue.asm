@@ -10,11 +10,10 @@
 
 ; melody data select
 ; uncomment one of followings or ALL
-;#define		TWINKLE		; Twinkle twinlke little star
 ;#define		XMAS		; We wish you a merry christmas
 ;#define		DONSUKA		; Donsuka pan pan ouendan
-#define		SPERUNKER	; Sperunker
-;#define			ALL			; play all
+;#define		SPERUNKER	; Sperunker
+#define			ALL			; play all
 
 .include "musicnote.inc"	; definition of music stuff
 
@@ -460,100 +459,8 @@ readv_ext:
 ;=============================================================
 ; data
 ;=============================================================
-#if defined(TWINKLE) || defined(ALL)
-SNDDATA:
-	.db NOTE_8, TONE_2C
-	.db NOTE_8, TONE_1C
-	.db NOTE_8, TONE_2C
-	.db NOTE_8, TONE_1C
-	.db NOTE_8, TONE_2G
-	.db NOTE_8, TONE_1G
-	.db NOTE_8, TONE_2G
-	.db NOTE_8, TONE_1G
-	.db NOTE_8, TONE_2A
-	.db NOTE_8, TONE_1A
-	.db NOTE_8, TONE_2A
-	.db NOTE_8, TONE_1A
-	.db NOTE_2, TONE_2G
-
-	.db NOTE_8, TONE_2F
-	.db NOTE_8, TONE_1F
-	.db NOTE_8, TONE_2F
-	.db NOTE_8, TONE_1F
-	.db NOTE_8, TONE_2E
-	.db NOTE_8, TONE_1E
-	.db NOTE_8, TONE_2E
-	.db NOTE_8, TONE_1E
-	.db NOTE_8, TONE_2D
-	.db NOTE_8, TONE_1D
-	.db NOTE_8, TONE_2D
-	.db NOTE_8, TONE_1D
-	.db NOTE_2, TONE_2C
-
-	.db NOTE_8, TONE_2G
-	.db NOTE_8, TONE_1G
-	.db NOTE_8, TONE_2G
-	.db NOTE_8, TONE_1G
-	.db NOTE_8, TONE_2F
-	.db NOTE_8, TONE_1F
-	.db NOTE_8, TONE_2F
-	.db NOTE_8, TONE_1F
-	.db NOTE_8, TONE_2E
-	.db NOTE_8, TONE_1E
-	.db NOTE_8, TONE_2E
-	.db NOTE_8, TONE_1E
-	.db NOTE_2, TONE_2D
-
-	.db NOTE_8, TONE_2G
-	.db NOTE_8, TONE_1G
-	.db NOTE_8, TONE_2G
-	.db NOTE_8, TONE_1G
-	.db NOTE_8, TONE_2F
-	.db NOTE_8, TONE_1F
-	.db NOTE_8, TONE_2F
-	.db NOTE_8, TONE_1F
-	.db NOTE_8, TONE_2E
-	.db NOTE_8, TONE_1E
-	.db NOTE_8, TONE_2E
-	.db NOTE_8, TONE_1E
-	.db NOTE_2, TONE_2D
-
-	.db NOTE_8, TONE_2C
-	.db NOTE_8, TONE_1C
-	.db NOTE_8, TONE_2C
-	.db NOTE_8, TONE_1C
-	.db NOTE_8, TONE_2G
-	.db NOTE_8, TONE_1G
-	.db NOTE_8, TONE_2G
-	.db NOTE_8, TONE_1G
-	.db NOTE_8, TONE_2A
-	.db NOTE_8, TONE_1A
-	.db NOTE_8, TONE_2A
-	.db NOTE_8, TONE_1A
-	.db NOTE_2, TONE_2G
-
-	.db NOTE_8, TONE_2F
-	.db NOTE_8, TONE_1F
-	.db NOTE_8, TONE_2F
-	.db NOTE_8, TONE_1F
-	.db NOTE_8, TONE_2E
-	.db NOTE_8, TONE_1E
-	.db NOTE_8, TONE_2E
-	.db NOTE_8, TONE_1E
-	.db NOTE_8, TONE_2D
-	.db NOTE_8, TONE_1D
-	.db NOTE_8, TONE_2D
-	.db NOTE_8, TONE_1D
-	.db NOTE_2, TONE_2C
-#if !defined(ALL)
-SNDDATA_END:
-#endif
-#endif
-
 #if defined(XMAS) || defined(ALL)
-#if !defined(ALL)
 SNDDATA:
-#endif
 	.db NOTE_8, TONE_2G
 	.db NOTE_16, TONE_3C
 	.db NOTE_16, TONE_2C
@@ -704,7 +611,6 @@ SNDDATA:
 SNDDATA_END:
 #endif
 #endif
-
 
 #if defined(DONSUKA) || defined(ALL)
 #if !defined(ALL)
