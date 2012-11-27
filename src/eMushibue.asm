@@ -4,6 +4,9 @@
 ; started on	: 11/11/2012
 ; clock			: clk=8MHz
 ;=============================================================
+; debug directive
+;#define	DEBUG
+
 ; chip select
 ;#define			ATMEGA168	; Atmega168
 #define			ATTINY45	; AtTiny45
@@ -70,10 +73,13 @@
 ;=============================================================
 ; constants
 ;=============================================================
-; timer cont
+#ifdef DEBUG
+.equ INSENSITIVITY = 8	; insensitivity
+#elif
+.equ INSENSITIVITY = 0	; insensitivity
+#endif
 .equ T10USEC	= 248	; Pre Scale=1/8, 100KHz
 .equ PRE_SCALE	= 0x2	; 1/8
-
 .equ VCNTMAX	= 20	; max valu of vcnt
 .equ ZEROGREADX	= 128	; 0g value of accerelometer read along x-axis
 .equ ZEROGREADY	= 128	; same for y-axis
@@ -405,15 +411,15 @@ readv_y:
 	add		vval, vread
 	lsr		vval
 readv_compare:
-	cpi		vval, 16-8
+	cpi		vval, 16-INSENSITIVITY
 	brlt	readv_level0
-	cpi		vval, 18-8
+	cpi		vval, 18-INSENSITIVITY
 	brlt	readv_level1
-	cpi		vval, 20-8
+	cpi		vval, 20-INSENSITIVITY
 	brlt	readv_level2
-	cpi		vval, 22-8
+	cpi		vval, 22-INSENSITIVITY
 	brlt	readv_level3
-	cpi		vval, 24-8
+	cpi		vval, 24-INSENSITIVITY
 	brlt	readv_level4
 	rjmp	readv_level5
 readv_level0:
