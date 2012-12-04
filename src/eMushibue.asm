@@ -74,7 +74,7 @@
 ; constants
 ;=============================================================
 #ifdef DEBUG
-.equ SENSITIVITY = 8	; sensitivity
+.equ SENSITIVITY = 26	; sensitivity
 #else
 .equ SENSITIVITY = 0	; sensitivity
 #endif
